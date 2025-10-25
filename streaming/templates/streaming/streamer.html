@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <title>🎬 Streamer</title>
+</head>
+
+<body>
+    <h2>🎥 Streamer</h2>
+    <input id="room" placeholder="Enter room ID" value="room1">
+    <button id="start">Start Streaming</button>
+    <br><br>
+    <video id="video" autoplay playsinline muted></video>
+
+    <script>
+        const video = document.getElementById("video");
+        const startBtn = document.getElementById("start");
+        const roomInput = document.getElementById("room");
+
+        startBtn.onclick = async () => {
+            const room_id = roomInput.value.trim();
+            if (!room_id) return alert("Enter a room ID!");
+
+            const pc = new RTCPeerConnection();
+            const stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
+            video.srcObject = stream;
+            stream.getTracks().forEach(track => pc.addTrack(track, stream));
+
+            const offer = await pc.createOffer();
+            await pc.setLocalDescription(offer);
+
+            const response = await fetch("/offer", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ sdp: pc.localDescription.sdp, type: pc.localDescription.type, room_id })
+            });
+
+            if (!response.ok) {
+                const text = await response.text();
+                alert("Server error: " + text);
+                return;
+            }
+
+            const answer = await response.json();
+            await pc.setRemoteDescription(answer);
+            console.log("✅ Streamer connected!");
+        };
+    </script>
+</body>
+
+</html>
