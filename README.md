@@ -10,8 +10,8 @@
 
 1.  Clone repository này về:
     ```bash
-    git clone [URL-GITHUB-CỦA-BẠN]
-    cd [TÊN-THƯ-MỤC-PROJECT]
+    git clone https://github.com/1usuzu/streaming.git
+    cd streaming
     ```
 
 2.  Tạo và kích hoạt môi trường ảo:
