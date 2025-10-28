@@ -25,12 +25,12 @@ SECRET_KEY = 'django-insecure-tp=^8w=)0d&m*-=!2#wgnc%r!@v!u^ci$q&3b3s+t^@%tbpt61
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = []
-
+ALLOWED_HOSTS = ['127.0.0.1', 'localhost']
 
 # Application definition
 
 INSTALLED_APPS = [
+    'channels',
     'django.contrib.admin',
     'django.contrib.auth',
     'django.contrib.contenttypes',
@@ -67,8 +67,14 @@ TEMPLATES = [
     },
 ]
 
-WSGI_APPLICATION = 'webrtc.wsgi.application'
+ASGI_APPLICATION = 'webrtc.asgi.application'
 
+# Sử dụng backend in-memory cho môi trường development
+CHANNEL_LAYERS = {
+    "default": {
+        "BACKEND": "channels.layers.InMemoryChannelLayer"
+    }
+}
 
 # Database
 # https://docs.djangoproject.com/en/5.2/ref/settings/#databases

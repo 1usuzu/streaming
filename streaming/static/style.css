@@ -313,7 +313,6 @@ video {
     box-sizing: border-box
 }
 
-/* small utilities */
 .sr-only {
     position: absolute;
     width: 1px;
@@ -383,7 +382,6 @@ h2 {
     color: var(--yt-text-primary)
 }
 
-/* controls row for room input + connect button */
 .room-row {
     display: flex;
     gap: 8px;

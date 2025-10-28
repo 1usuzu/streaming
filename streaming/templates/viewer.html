@@ -2,16 +2,12 @@
 {% block title %}👀 Viewer{% endblock %}
 
 {% block content %}
-
 <div class="viewer-layout">
-
     <div class="main-content">
-
         <div class="video-container">
             <video id="remoteVideo" autoplay playsinline>
             </video>
         </div>
-
         <div class="controls-container" style="margin-top: 24px; max-width: 100%;">
             <h2>Kết nối Stream</h2>
             <label for="room" class="sr-only">Room ID</label>
@@ -26,29 +22,87 @@
         <div class="chat-header">
             Trò chuyện trực tiếp
         </div>
-
-        <div class="chat-messages">
+        <div class="chat-messages" id="chat-messages">
         </div>
-
         <div class="chat-input">
-            <input type="text" placeholder="Trò chuyện...">
+            <input id="chat-input" type="text" placeholder="Nhấn Kết nối để chat..." disabled>
         </div>
     </aside>
-
 </div>
 {% endblock %}
 
-
 {% block scripts %}
 <script>
-    function getCsrfToken() {
-        return document.querySelector('meta[name="csrf-token"]').getAttribute('content');
-    }
-
+    // === CÁC BIẾN ===
     const connectBtn = document.getElementById("connect");
     const remoteVideo = document.getElementById("remoteVideo");
     const roomInput = document.getElementById("room");
 
+    // Biến cho Chat
+    const chatLog = document.getElementById('chat-messages');
+    const chatInput = document.getElementById('chat-input');
+    let chatSocket = null; // Sẽ lưu kết nối WebSocket
+    let peerConnection = null; // Sẽ lưu kết nối WebRTC
+
+    // === HÀM TRỢ GIÚP ===
+    function getCsrfToken() {
+        return document.querySelector('meta[name="csrf-token"]').getAttribute('content');
+    }
+
+    // Hàm thêm tin nhắn vào chat box
+    function appendChatMessage(data) {
+        const { username, message, role } = data;
+        const messageDiv = document.createElement('div');
+        messageDiv.className = 'chat-message';
+
+        const strongTag = document.createElement('strong');
+        strongTag.textContent = `${username}: `;
+
+        if (role === 'streamer') {
+            strongTag.style.color = 'var(--yt-red)';
+        }
+
+        const spanTag = document.createElement('span');
+        spanTag.textContent = message;
+
+        messageDiv.appendChild(strongTag);
+        messageDiv.appendChild(spanTag);
+        chatLog.appendChild(messageDiv);
+
+        chatLog.scrollTop = chatLog.scrollHeight;
+    }
+
+    // Hàm khởi tạo WebSocket
+    function setupWebSocket(roomId) {
+        const wsProtocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+        const wsUrl = `${wsProtocol}//${window.location.host}/ws/chat/${roomId}/`;
+
+        chatSocket = new WebSocket(wsUrl);
+
+        chatSocket.onopen = () => {
+            console.log('Chat WebSocket connected!');
+            chatInput.disabled = false; // Kích hoạt ô chat
+            chatInput.placeholder = 'Gửi tin nhắn...';
+        };
+
+        chatSocket.onmessage = (e) => {
+            // Nhận tin nhắn từ consumer
+            const data = JSON.parse(e.data);
+            appendChatMessage(data);
+        };
+
+        chatSocket.onclose = () => {
+            console.error('Chat WebSocket disconnected.');
+            chatInput.disabled = true;
+            chatInput.placeholder = 'Đã mất kết nối chat...';
+        };
+
+        chatSocket.onerror = (err) => {
+            console.error('WebSocket error:', err);
+        };
+    }
+
+    // === LOGIC WebRTC (Viewer) ===
     connectBtn.onclick = async () => {
         const room_id = roomInput.value.trim();
         if (!room_id) return alert("Vui lòng nhập Room ID!");
@@ -57,28 +111,22 @@
         connectBtn.textContent = "Đang kết nối...";
 
         try {
-            const pc = new RTCPeerConnection();
+            // 1. Khởi tạo WebRTC
+            peerConnection = new RTCPeerConnection();
 
-            pc.ontrack = (event) => {
+            peerConnection.ontrack = (event) => {
                 console.log("Got track!", event.track.kind);
                 if (remoteVideo.srcObject !== event.streams[0]) {
-                    console.log("Assigning stream to video element");
                     remoteVideo.srcObject = event.streams[0];
                 }
-
-                const playPromise = remoteVideo.play();
-                if (playPromise !== undefined) {
-                    playPromise.catch(error => {
-                        console.error("Video playback FAILED:", error);
-                    });
-                }
+                remoteVideo.play().catch(error => console.error("Video playback FAILED:", error));
             };
 
-            pc.addTransceiver("video", { direction: "recvonly" });
-            pc.addTransceiver("audio", { direction: "recvonly" });
+            peerConnection.addTransceiver("video", { direction: "recvonly" });
+            peerConnection.addTransceiver("audio", { direction: "recvonly" });
 
-            const offer = await pc.createOffer();
-            await pc.setLocalDescription(offer);
+            const offer = await peerConnection.createOffer();
+            await peerConnection.setLocalDescription(offer);
 
             const response = await fetch("/viewer_connect", {
                 method: "POST",
@@ -86,30 +134,47 @@
                     "Content-Type": "application/json",
                     'X-CSRFToken': getCsrfToken()
                 },
-                body: JSON.stringify({ sdp: pc.localDescription.sdp, type: pc.localDescription.type, room_id })
+                body: JSON.stringify({ sdp: peerConnection.localDescription.sdp, type: peerConnection.localDescription.type, room_id })
             });
 
             if (!response.ok) {
                 const text = await response.text();
-                if (response.status === 403) {
-                    throw new Error('Lỗi Quyền: ' + text);
-                }
+                if (response.status === 403) throw new Error('Lỗi Quyền: ' + text);
+                if (response.status === 404) throw new Error('Không tìm thấy phòng: ' + text);
                 throw new Error("Lỗi máy chủ: " + text);
             }
 
             const answer = await response.json();
-            await pc.setRemoteDescription(answer);
+            await peerConnection.setRemoteDescription(answer);
 
+            // 2. Khởi tạo WebSocket SAU KHI WebRTC thành công
+            setupWebSocket(room_id);
+
+            // 3. Cập nhật UI
             console.log("👀 Connected to room:", room_id);
             connectBtn.textContent = "Đã kết nối";
             connectBtn.style.backgroundColor = "#28a745";
-            connectBtn.style.color = "#FFFFFF";
+            roomInput.disabled = true; // Vô hiệu hóa input phòng
 
         } catch (error) {
             console.error("Lỗi khi kết nối:", error);
             alert("Lỗi: " + error.message);
             connectBtn.disabled = false;
             connectBtn.textContent = "Kết nối";
+        }
+    };
+
+    // Gửi tin nhắn khi nhấn Enter
+    chatInput.onkeypress = (e) => {
+        if (e.key === 'Enter' && chatSocket && chatSocket.readyState === WebSocket.OPEN) {
+            const message = chatInput.value.trim();
+            if (message) {
+                // Gửi tin nhắn lên consumer
+                chatSocket.send(JSON.stringify({
+                    'message': message
+                }));
+                chatInput.value = ''; // Xóa input sau khi gửi
+            }
         }
     };
 </script>

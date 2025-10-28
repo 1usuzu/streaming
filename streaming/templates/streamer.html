@@ -36,8 +36,15 @@
         </main>
 
         <aside class="chat-sidebar" aria-label="Chat sidebar">
-            <div class="chat-header">Trò chuyện trực tiếp</div>
+            <div class="chat-header">Tin nhắn</div>
 
+            <div class="chat-messages" id="chat-messages">
+                <div class="chat-message"><span>Chào mừng đến kênh!</span></div>
+            </div>
+
+            <div class="chat-input">
+                <input id="chat-input" type="text" placeholder="Đăng nhập để nhắn..." disabled>
+            </div>
         </aside>
     </div>
 </div>
@@ -45,16 +52,80 @@
 
 {% block scripts %}
 <script>
-    function getCsrfToken() {
-        return document.querySelector('meta[name="csrf-token"]').getAttribute('content');
-    }
-
+    // === CÁC BIẾN ===
     const video = document.getElementById('video');
     const startBtn = document.getElementById('start');
     const stopBtn = document.getElementById('stop');
     const roomInput = document.getElementById('room');
     const roomLabel = document.getElementById('room-label');
 
+    // Biến cho Chat
+    const chatLog = document.getElementById('chat-messages');
+    const chatInput = document.getElementById('chat-input');
+    let chatSocket = null; // Sẽ lưu kết nối WebSocket
+    let peerConnection = null; // Sẽ lưu kết nối WebRTC
+
+    // === HÀM TRỢ GIÚP ===
+    function getCsrfToken() {
+        return document.querySelector('meta[name="csrf-token"]').getAttribute('content');
+    }
+
+    // Hàm thêm tin nhắn vào chat box
+    function appendChatMessage(data) {
+        const { username, message, role } = data;
+        const messageDiv = document.createElement('div');
+        messageDiv.className = 'chat-message';
+
+        const strongTag = document.createElement('strong');
+        strongTag.textContent = `${username}: `;
+
+        // Thêm màu cho Streamer
+        if (role === 'streamer') {
+            strongTag.style.color = 'var(--yt-red)';
+        }
+
+        const spanTag = document.createElement('span');
+        spanTag.textContent = message;
+
+        messageDiv.appendChild(strongTag);
+        messageDiv.appendChild(spanTag);
+        chatLog.appendChild(messageDiv);
+
+        // Tự động cuộn xuống
+        chatLog.scrollTop = chatLog.scrollHeight;
+    }
+
+    // Hàm khởi tạo WebSocket
+    function setupWebSocket(roomId) {
+        const wsProtocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+        const wsUrl = `${wsProtocol}//${window.location.host}/ws/chat/${roomId}/`;
+
+        chatSocket = new WebSocket(wsUrl);
+
+        chatSocket.onopen = () => {
+            console.log('Chat WebSocket connected!');
+            chatInput.disabled = false; // Kích hoạt ô chat
+            chatInput.placeholder = 'Gửi tin nhắn...';
+        };
+
+        chatSocket.onmessage = (e) => {
+            // Nhận tin nhắn từ consumer
+            const data = JSON.parse(e.data);
+            appendChatMessage(data);
+        };
+
+        chatSocket.onclose = () => {
+            console.error('Chat WebSocket disconnected.');
+            chatInput.disabled = true;
+            chatInput.placeholder = 'Đã mất kết nối chat...';
+        };
+
+        chatSocket.onerror = (err) => {
+            console.error('WebSocket error:', err);
+        };
+    }
+
+    // === LOGIC WebRTC (Stream) ===
     startBtn.onclick = async () => {
         const room_id = roomInput.value.trim();
         if (!room_id) return alert('Vui lòng nhập Room ID!');
@@ -63,13 +134,14 @@
         startBtn.textContent = 'Đang kết nối...';
 
         try {
-            const pc = new RTCPeerConnection();
+            // 1. Khởi tạo WebRTC
+            peerConnection = new RTCPeerConnection();
             const stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
             video.srcObject = stream;
-            stream.getTracks().forEach(track => pc.addTrack(track, stream));
+            stream.getTracks().forEach(track => peerConnection.addTrack(track, stream));
 
-            const offer = await pc.createOffer();
-            await pc.setLocalDescription(offer);
+            const offer = await peerConnection.createOffer();
+            await peerConnection.setLocalDescription(offer);
 
             const response = await fetch('/offer', {
                 method: 'POST',
@@ -77,25 +149,29 @@
                     'Content-Type': 'application/json',
                     'X-CSRFToken': getCsrfToken()
                 },
-                body: JSON.stringify({ sdp: pc.localDescription.sdp, type: pc.localDescription.type, room_id })
+                body: JSON.stringify({ sdp: peerConnection.localDescription.sdp, type: peerConnection.localDescription.type, room_id })
             });
 
             if (!response.ok) {
                 const text = await response.text();
-                if (response.status === 403) {
-                    throw new Error('Lỗi Quyền: ' + text);
-                }
+                if (response.status === 403) throw new Error('Lỗi Quyền: ' + text);
                 throw new Error('Lỗi máy chủ: ' + text);
             }
 
             const answer = await response.json();
-            await pc.setRemoteDescription(answer);
+            await peerConnection.setRemoteDescription(answer);
 
+            // 2. Khởi tạo WebSocket SAU KHI WebRTC thành công
+            setupWebSocket(room_id);
+
+            // 3. Cập nhật UI
             roomLabel.textContent = room_id;
             startBtn.textContent = 'Đang Stream';
             startBtn.classList.remove('primary');
             startBtn.classList.add('danger');
             stopBtn.disabled = false;
+            roomInput.disabled = true; // Vô hiệu hóa input phòng
+
         } catch (err) {
             console.error(err);
             alert('Lỗi: ' + err.message);
@@ -105,15 +181,47 @@
     };
 
     stopBtn.onclick = () => {
+        // Đóng WebRTC
+        if (peerConnection) {
+            peerConnection.close();
+            peerConnection = null;
+        }
+        // Đóng WebSocket
+        if (chatSocket) {
+            chatSocket.close();
+            chatSocket = null;
+        }
+        // Dừng camera
+        if (video && video.srcObject) {
+            video.srcObject.getTracks().forEach(t => t.stop());
+            video.srcObject = null;
+        }
+
+        // Reset UI
         startBtn.disabled = false;
         startBtn.textContent = 'Bắt đầu Stream';
         startBtn.classList.add('primary');
         stopBtn.disabled = true;
         roomLabel.textContent = 'room1';
-        if (video && video.srcObject) {
-            video.srcObject.getTracks().forEach(t => t.stop());
-            video.srcObject = null;
+        roomInput.disabled = false;
+        chatInput.disabled = true;
+        chatInput.placeholder = 'Đăng nhập để nhắn...';
+        chatLog.innerHTML = '<div class="chat-message"><span>Chào mừng đến kênh!</span></div>'; // Reset chat
+    };
+
+    // Gửi tin nhắn khi nhấn Enter
+    chatInput.onkeypress = (e) => {
+        if (e.key === 'Enter' && chatSocket && chatSocket.readyState === WebSocket.OPEN) {
+            const message = chatInput.value.trim();
+            if (message) {
+                // Gửi tin nhắn lên consumer
+                chatSocket.send(JSON.stringify({
+                    'message': message
+                }));
+                chatInput.value = ''; // Xóa input sau khi gửi
+            }
         }
     };
+
 </script>
 {% endblock %}
