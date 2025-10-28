@@ -6,29 +6,27 @@ from pathlib import Path
 BASE_DIR = Path(__file__).resolve().parent.parent
 
 # (QUAN TRỌNG) Kiểm tra xem chúng ta đang ở trên Render hay không
-# Render tự động đặt biến môi trường RENDER='True'
 IS_RENDER = os.environ.get('RENDER', 'False') == 'True'
 
 if IS_RENDER:
     # === CÀI ĐẶT CHO PRODUCTION (TRÊN RENDER) ===
     
-    # Lấy SECRET_KEY từ biến môi trường
     SECRET_KEY = os.environ.get('SECRET_KEY')
-    DEBUG = False # Tắt Debug trên production
+    DEBUG = False 
     
-    # Lấy tên miền của Render
-    ALLOWED_HOSTS = ['127.0.0.1', 'localhost']
-    RENDER_EXTERNAL_HOSTNAME = os.environ.get('RENDER_EXTERNAL_HOSTNAME')
-    if RENDER_EXTERNAL_HOSTNAME:
-        ALLOWED_HOSTS.append(RENDER_EXTERNAL_HOSTNAME)
+    # (SỬA LỖI) Thêm trực tiếp tên miền của bạn vào đây
+    # để sửa lỗi "DisallowedHost"
+    ALLOWED_HOSTS = ['127.0.0.1', 'localhost', 'streemly.onrender.com']
 
-    # Lấy các tên miền đáng tin cậy (cho CSRF)
+    # (SỬA LỖI) Đọc CSRF_TRUSTED_ORIGINS từ biến môi trường
+    # để sửa lỗi 403 (CSRF)
     trusted_origins_env = os.environ.get('CSRF_TRUSTED_ORIGINS')
     if trusted_origins_env:
         CSRF_TRUSTED_ORIGINS = trusted_origins_env.split(',')
     else:
         CSRF_TRUSTED_ORIGINS = []
-    
+
+    # (DỰ PHÒNG) Thêm cả RENDER_EXTERNAL_URL (do Render cung cấp)
     RENDER_EXTERNAL_URL = os.environ.get('RENDER_EXTERNAL_URL')
     if RENDER_EXTERNAL_URL and RENDER_EXTERNAL_URL not in CSRF_TRUSTED_ORIGINS:
         CSRF_TRUSTED_ORIGINS.append(RENDER_EXTERNAL_URL)
@@ -55,9 +53,8 @@ if IS_RENDER:
 else:
     # === CÀI ĐẶT CHO DEVELOPMENT (Ở MÁY LOCAL) ===
     
-    # Dùng một key đơn giản ở local
     SECRET_KEY = 'django-insecure-local-key-cho-development'
-    DEBUG = True # Bật Debug ở local
+    DEBUG = True 
     ALLOWED_HOSTS = ['127.0.0.1', 'localhost']
     CSRF_TRUSTED_ORIGINS = ['http://127.0.0.1:8000', 'http://localhost:8000']
 
@@ -77,7 +74,7 @@ else:
     }
     
     # File tĩnh Local
-    STATIC_ROOT = BASE_DIR / 'staticfiles' # Có thể giữ nguyên
+    STATIC_ROOT = BASE_DIR / 'staticfiles'
 
 # === CÀI ĐẶT CHUNG (Cho cả hai môi trường) ===
 
@@ -95,7 +92,6 @@ INSTALLED_APPS = [
 
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
-    # WhiteNoise có thể chạy ở cả local và production
     'whitenoise.middleware.WhiteNoiseMiddleware', 
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
@@ -138,6 +134,7 @@ USE_TZ = True
 
 STATIC_URL = 'static/'
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
+
 STATICFILES_DIRS = [
     BASE_DIR / "streaming/static",
 ]
