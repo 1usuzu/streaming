@@ -1,4 +1,6 @@
 import json
+import asyncio
+
 from django.shortcuts import render, redirect
 from django.http import JsonResponse, HttpResponse, HttpResponseForbidden
 from django.contrib import messages
@@ -6,8 +8,6 @@ from django.contrib.auth import login, logout
 from django.contrib.auth.models import User, Group
 from django.contrib.auth.decorators import login_required
 from aiortc import RTCPeerConnection, RTCSessionDescription
-
-# (MỚI) Import trình trợ giúp sync_to_async
 from asgiref.sync import sync_to_async
 
 # ========================================
@@ -89,17 +89,12 @@ def viewer_page(request):
     return render(request, "viewer.html")
 
 
-# === (CẬP NHẬT) Sửa hàm offer ===
 async def offer(request):
-    """
-    Streamer gửi offer. Đây là một ASYNC view.
-    """
-    # (CẬP NHẬT) 1. Kiểm tra đăng nhập (an toàn)
+    """ Streamer gửi offer. """
     is_authenticated = await sync_to_async(lambda: request.user.is_authenticated)()
     if not is_authenticated:
         return HttpResponseForbidden("Bạn phải đăng nhập để stream.")
     
-    # (CẬP NHẬT) 2. Kiểm tra vai trò (an toàn)
     @sync_to_async
     def is_streamer(user):
         return user.groups.filter(name='Streamers').exists()
@@ -118,13 +113,16 @@ async def offer(request):
     pcs.add(pc)
     stream_tracks = []
     
-    # (CẬP NHẬT) 3. Lấy username (an toàn)
-    room_owner_username = await sync_to_async(lambda: request.user.username)() 
+    # (MỚI) 1. Tạo một "sự kiện" để làm cổng chờ
+    tracks_received = asyncio.Event()
 
     @pc.on("track")
     def on_track(track):
         print(f"📡 [{room_id}] Streamer sending:", track.kind)
         stream_tracks.append(track)
+        
+        # (MỚI) 2. Mở "cổng" khi nhận được track (chỉ cần 1 track là đủ)
+        tracks_received.set()
 
     @pc.on("connectionstatechange")
     async def on_connectionstatechange():
@@ -137,12 +135,25 @@ async def offer(request):
             pcs.discard(pc)
 
     await pc.setRemoteDescription(offer_sdp)
+    
+    # (MỚI) 3. Đợi "cổng" mở (với 5 giây chờ tối đa)
+    # Đây là dòng code giải quyết vấn đề
+    try:
+        await asyncio.wait_for(tracks_received.wait(), timeout=5.0)
+    except asyncio.TimeoutError:
+        print(f"❌ [{room_id}] Timeout waiting for tracks from streamer.")
+        await pc.close()
+        pcs.discard(pc)
+        return JsonResponse({"error": "Timeout waiting for media tracks"}, status=504)
+
+    # 4. Bây giờ `stream_tracks` đã có dữ liệu
     answer = await pc.createAnswer()
     await pc.setLocalDescription(answer)
 
+    room_owner_username = await sync_to_async(lambda: request.user.username)() 
     rooms[room_id] = {
         "pc": pc,
-        "tracks": stream_tracks,
+        "tracks": stream_tracks, # Danh sách này sẽ không còn rỗng
         "owner": room_owner_username 
     }
 
@@ -151,7 +162,6 @@ async def offer(request):
         "sdp": pc.localDescription.sdp,
         "type": pc.localDescription.type
     })
-
 
 # === (CẬP NHẬT) Sửa hàm viewer ===
 async def viewer(request):
