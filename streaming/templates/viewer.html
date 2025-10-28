@@ -1,0 +1,106 @@
+{% extends 'base.html' %}
+{% block title %}Viewer{% endblock %}
+
+{% block content %}
+
+<div class="viewer-layout">
+
+    <div class="main-content">
+
+        <div class="video-container">
+            <video id="remoteVideo" autoplay playsinline>
+            </video>
+        </div>
+
+        <div class="controls-container" style="margin-top: 24px; max-width: 100%;">
+            <h2>Kết nối Stream</h2>
+            <label for="room" class="sr-only">Room ID</label>
+            <div class="controls-row room-row">
+                <input id="room" class="room-input" type="text" placeholder="Nhập Room ID" value="room1">
+                <button id="connect" class="primary">Kết nối</button>
+            </div>
+        </div>
+    </div>
+
+    <aside class="chat-sidebar">
+        <div class="chat-header">
+            Trò chuyện trực tiếp
+        </div>
+
+        <div class="chat-messages">
+        </div>
+
+        <div class="chat-input">
+            <input type="text" placeholder="Trò chuyện...">
+        </div>
+    </aside>
+
+</div>
+{% endblock %}
+
+
+{% block scripts %}
+<script>
+    const connectBtn = document.getElementById("connect");
+    const remoteVideo = document.getElementById("remoteVideo");
+    const roomInput = document.getElementById("room");
+
+    connectBtn.onclick = async () => {
+        const room_id = roomInput.value.trim();
+        if (!room_id) return alert("Vui lòng nhập Room ID!");
+
+        connectBtn.disabled = true;
+        connectBtn.textContent = "Đang kết nối...";
+
+        try {
+            const pc = new RTCPeerConnection();
+
+            pc.ontrack = (event) => {
+                console.log("Got track!", event.track.kind);
+                if (remoteVideo.srcObject !== event.streams[0]) {
+                    console.log("Assigning stream to video element");
+                    remoteVideo.srcObject = event.streams[0];
+                }
+
+                const playPromise = remoteVideo.play();
+                if (playPromise !== undefined) {
+                    playPromise.catch(error => {
+                        console.error("Video playback FAILED:", error);
+                    });
+                }
+            };
+
+            pc.addTransceiver("video", { direction: "recvonly" });
+            pc.addTransceiver("audio", { direction: "recvonly" });
+
+            const offer = await pc.createOffer();
+            await pc.setLocalDescription(offer);
+
+            const response = await fetch("/viewer_connect", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ sdp: pc.localDescription.sdp, type: pc.localDescription.type, room_id })
+            });
+
+            if (!response.ok) {
+                const text = await response.text();
+                throw new Error("Lỗi máy chủ: " + text);
+            }
+
+            const answer = await response.json();
+            await pc.setRemoteDescription(answer);
+
+            console.log("👀 Connected to room:", room_id);
+            connectBtn.textContent = "Đã kết nối";
+            connectBtn.style.backgroundColor = "#28a745";
+            connectBtn.style.color = "#FFFFFF";
+
+        } catch (error) {
+            console.error("Lỗi khi kết nối:", error);
+            alert("Lỗi: " + error.message);
+            connectBtn.disabled = false;
+            connectBtn.textContent = "Kết nối";
+        }
+    };
+</script>
+{% endblock %}

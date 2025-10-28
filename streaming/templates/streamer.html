@@ -1,0 +1,115 @@
+{% extends 'base.html' %}
+{% block title %}Streamer{% endblock %}
+
+{% block content %}
+<div class="container">
+    <div class="viewer-layout">
+        <main class="main-content">
+            <div class="video-container">
+                <video id="video" autoplay playsinline muted></video>
+            </div>
+
+            <div class="controls-overlay" role="region" aria-label="Streamer controls">
+                <div class="controls-row">
+                    <div class="stream-meta">
+                        <div style="display:flex;align-items:center;gap:8px;">
+                            <span class="live-badge">Trực tiếp</span>
+                        </div>
+                        <div class="stream-sub">Room: <strong id="room-label">room1</strong></div>
+                    </div>
+                </div>
+
+                <div class="controls-row">
+                    <label for="room" class="sr-only">Room ID</label>
+                    <input id="room" type="text" placeholder="Nhập Room ID" value="room1">
+                    <div style="margin-left:auto;display:flex;gap:8px;">
+                        <button id="start" class="primary">Bắt đầu Stream</button>
+                        <button id="stop" class="danger" disabled>Dừng</button>
+                    </div>
+                </div>
+
+                <div class="seek-compact" aria-hidden="true">
+                    <div></div>
+                </div>
+            </div>
+
+        </main>
+
+        <aside class="chat-sidebar" aria-label="Chat sidebar">
+            <div class="chat-header">Tin nhắn</div>
+            <div class="chat-messages" id="chat-messages">
+                <div class="chat-message"><span>Chào mừng đến kênh!</span></div>
+            </div>
+
+            <div class="chat-input">
+                <input id="chat-input" type="text" placeholder="Đăng nhập để nhắn..." disabled>
+            </div>
+        </aside>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    const video = document.getElementById('video');
+    const startBtn = document.getElementById('start');
+    const stopBtn = document.getElementById('stop');
+    const roomInput = document.getElementById('room');
+    const roomLabel = document.getElementById('room-label');
+
+    startBtn.onclick = async () => {
+        const room_id = roomInput.value.trim();
+        if (!room_id) return alert('Vui lòng nhập Room ID!');
+
+        startBtn.disabled = true;
+        startBtn.textContent = 'Đang kết nối...';
+
+        try {
+            const pc = new RTCPeerConnection();
+            const stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
+            video.srcObject = stream;
+            stream.getTracks().forEach(track => pc.addTrack(track, stream));
+
+            const offer = await pc.createOffer();
+            await pc.setLocalDescription(offer);
+
+            const response = await fetch('/offer', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ sdp: pc.localDescription.sdp, type: pc.localDescription.type, room_id })
+            });
+
+            if (!response.ok) {
+                const text = await response.text();
+                throw new Error('Lỗi máy chủ: ' + text);
+            }
+
+            const answer = await response.json();
+            await pc.setRemoteDescription(answer);
+
+            roomLabel.textContent = room_id;
+            startBtn.textContent = 'Đang Stream';
+            startBtn.classList.remove('primary');
+            startBtn.classList.add('danger');
+            stopBtn.disabled = false;
+        } catch (err) {
+            console.error(err);
+            alert('Lỗi: ' + err.message);
+            startBtn.disabled = false;
+            startBtn.textContent = 'Bắt đầu Stream';
+        }
+    };
+
+    stopBtn.onclick = () => {
+        startBtn.disabled = false;
+        startBtn.textContent = 'Bắt đầu Stream';
+        startBtn.classList.add('primary');
+        stopBtn.disabled = true;
+        roomLabel.textContent = 'room1';
+        if (video && video.srcObject) {
+            video.srcObject.getTracks().forEach(t => t.stop());
+            video.srcObject = null;
+        }
+    };
+</script>
+{% endblock %}

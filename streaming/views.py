@@ -15,11 +15,11 @@ rooms = {}  # room_id -> {"pc": pc, "tracks": [...]}
 
 def index(request):
     """Phục vụ trang Streamer."""
-    return render(request, "streaming/streamer.html")
+    return render(request, "streamer.html")
 
 def viewer_page(request):
     """Phục vụ trang Viewer."""
-    return render(request, "streaming/viewer.html")
+    return render(request, "viewer.html")
 
 @csrf_exempt  # Bỏ qua kiểm tra CSRF vì client gửi JSON
 async def offer(request):
