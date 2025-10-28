@@ -9,6 +9,25 @@
     <link rel="stylesheet" href="{% static 'style.css' %}">
     <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
     <meta name="csrf-token" content="{{ csrf_token }}">
+
+    <style>
+        .theme-toggle {
+            background: none;
+            border: none;
+            color: var(--yt-text-primary);
+            cursor: pointer;
+            padding: 8px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-right: 8px;
+        }
+
+        .theme-toggle:hover {
+            background-color: var(--yt-surface-hover);
+        }
+    </style>
 </head>
 
 <body>
@@ -16,15 +35,19 @@
         <div class="navbar-left">
             <a href="{% url 'welcome' %}" class="logo">
                 <span class="material-icons logo-icon">play_circle_filled</span>
-                Go Live
+                StreamRTC
             </a>
         </div>
         <div class="navbar-center">
         </div>
 
         <div class="navbar-right">
-            {% if user.is_authenticated %}
 
+            <button class="theme-toggle" id="theme-toggle-btn" aria-label="Toggle light/dark mode">
+                <span class="material-icons" id="theme-toggle-icon">light_mode</span>
+            </button>
+
+            {% if user.is_authenticated %}
             {% with roles_string=user.groups.all|join:"," %}
             {% if "Streamers" in roles_string %}
             <a href="{% url 'stream_page' %}"
@@ -33,7 +56,6 @@
             <a href="{% url 'viewer_page' %}"
                 style="color:var(--yt-blue);text-decoration:none;margin-right:16px;font-weight:700;">Xem Stream</a>
             {% endif %}
-
             <span style="color:var(--yt-text-primary);text-decoration:none;margin-left:8px;">
                 Xin chào, <strong>{{ user.username }}</strong>
                 {% if "Streamers" in roles_string %}
@@ -43,7 +65,6 @@
                 {% endif %}
             </span>
             {% endwith %}
-
             <a href="{% url 'logout' %}" style="color:var(--yt-text-secondary);margin-left:12px;">Đăng xuất</a>
             {% else %}
             <a href="{% url 'login' %}"
@@ -56,25 +77,8 @@
     </header>
 
     {% if messages %}
-    <div style="max-width:90%;margin:12px auto;">
-        <ul class="flash-messages" style="list-style:none;padding:0;margin:0;">
-            {% for m in messages %}
-            {% if m.level == DEFAULT_MESSAGE_LEVELS.ERROR %}
-            <li
-                style="background:rgba(255, 0, 0, 0.2); border: 1px solid var(--yt-red); color:var(--yt-text-primary);padding:12px 16px;border-radius:6px;margin-bottom:6px;">
-                <strong>Lỗi:</strong> {{ m }}
-            </li>
-            {% else %}
-            <li
-                style="background:rgba(0, 255, 0, 0.1); border: 1px solid #28a745; color:var(--yt-text-primary);padding:12px 16px;border-radius:6px;margin-bottom:6px;">
-                {{ m }}
-            </li>
-            {% endif %}
-            {% endfor %}
-        </ul>
-    </div>
+    ...
     {% endif %}
-
     <main class="container">
         {% block content %}
         {% endblock %}
@@ -82,6 +86,44 @@
 
     {% block scripts %}
     {% endblock %}
+
+    <script>
+        (function () {
+            const themeToggleButton = document.getElementById('theme-toggle-btn');
+            const themeToggleIcon = document.getElementById('theme-toggle-icon');
+            const body = document.body;
+            const currentTheme = localStorage.getItem('theme');
+
+            // Hàm áp dụng theme
+            function setTheme(theme) {
+                if (theme === 'light') {
+                    body.classList.add('light-mode');
+                    themeToggleIcon.textContent = 'dark_mode'; // Icon mặt trăng
+                    localStorage.setItem('theme', 'light');
+                } else {
+                    body.classList.remove('light-mode');
+                    themeToggleIcon.textContent = 'light_mode'; // Icon mặt trời
+                    localStorage.setItem('theme', 'dark');
+                }
+            }
+
+            // 1. Áp dụng theme đã lưu khi tải trang
+            if (currentTheme === 'light') {
+                setTheme('light');
+            } else {
+                setTheme('dark');
+            }
+
+            // 2. Thêm sự kiện click cho nút
+            themeToggleButton.addEventListener('click', () => {
+                if (body.classList.contains('light-mode')) {
+                    setTheme('dark');
+                } else {
+                    setTheme('light');
+                }
+            });
+        })();
+    </script>
 </body>
 
 </html>

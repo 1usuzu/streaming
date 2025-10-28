@@ -9,6 +9,15 @@
     --yt-red: #FF0000;
 }
 
+body.light-mode {
+    --yt-background: #FFFFFF;
+    --yt-surface: #F9F9F9;
+    --yt-surface-hover: #EEEEEE;
+    --yt-border: #E0E0E0;
+    --yt-text-primary: #0F0F0F;
+    --yt-text-secondary: #606060;
+}
+
 body {
     font-family: "Roboto", sans-serif;
     margin: 0;
