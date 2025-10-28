@@ -325,7 +325,8 @@ video {
     border: 0
 }
 
-input[type="text"] {
+input[type="text"],
+input[type="password"] {
     width: 100%;
     padding: 12px;
     font-size: 16px;
@@ -336,7 +337,8 @@ input[type="text"] {
     box-sizing: border-box
 }
 
-input[type="text"]:focus {
+input[type="text"]:focus,
+input[type="password"]:focus {
     outline: none;
     border-color: var(--yt-blue)
 }
@@ -348,7 +350,8 @@ button {
     border: none;
     border-radius: 20px;
     cursor: pointer;
-    transition: background-color .18s ease, opacity .18s ease
+    transition: background-color .18s ease, opacity .18s ease;
+    white-space: nowrap;
 }
 
 button:disabled {

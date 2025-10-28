@@ -1,5 +1,5 @@
 {% extends 'base.html' %}
-{% block title %}Streamer{% endblock %}
+{% block title %}🎬 Streamer{% endblock %}
 
 {% block content %}
 <div class="container">
@@ -36,14 +36,8 @@
         </main>
 
         <aside class="chat-sidebar" aria-label="Chat sidebar">
-            <div class="chat-header">Tin nhắn</div>
-            <div class="chat-messages" id="chat-messages">
-                <div class="chat-message"><span>Chào mừng đến kênh!</span></div>
-            </div>
+            <div class="chat-header">Trò chuyện trực tiếp</div>
 
-            <div class="chat-input">
-                <input id="chat-input" type="text" placeholder="Đăng nhập để nhắn..." disabled>
-            </div>
         </aside>
     </div>
 </div>
@@ -51,6 +45,10 @@
 
 {% block scripts %}
 <script>
+    function getCsrfToken() {
+        return document.querySelector('meta[name="csrf-token"]').getAttribute('content');
+    }
+
     const video = document.getElementById('video');
     const startBtn = document.getElementById('start');
     const stopBtn = document.getElementById('stop');
@@ -75,12 +73,18 @@
 
             const response = await fetch('/offer', {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': getCsrfToken()
+                },
                 body: JSON.stringify({ sdp: pc.localDescription.sdp, type: pc.localDescription.type, room_id })
             });
 
             if (!response.ok) {
                 const text = await response.text();
+                if (response.status === 403) {
+                    throw new Error('Lỗi Quyền: ' + text);
+                }
                 throw new Error('Lỗi máy chủ: ' + text);
             }
 

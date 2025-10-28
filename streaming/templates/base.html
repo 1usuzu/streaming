@@ -8,30 +8,72 @@
     <title>{% block title %}StreamRTC{% endblock %}</title>
     <link rel="stylesheet" href="{% static 'style.css' %}">
     <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
+    <meta name="csrf-token" content="{{ csrf_token }}">
 </head>
 
 <body>
-    <header class="navbar">
+    <header class="navbar" style="display: flex;">
         <div class="navbar-left">
-            <span class="material-icons">menu</span>
-            <a href="/" class="logo">
+            <a href="{% url 'welcome' %}" class="logo">
                 <span class="material-icons logo-icon">play_circle_filled</span>
                 StreamRTC
             </a>
         </div>
         <div class="navbar-center">
-            <input type="text" class="search-bar" placeholder="Tìm kiếm">
-            <button class="search-btn">
-                <span class="material-icons">search</span>
-            </button>
         </div>
+
         <div class="navbar-right">
-            <span class="material-icons">video_call</span>
-            <span class="material-icons">apps</span>
-            <span class="material-icons">notifications</span>
-            <span class="material-icons profile-pic">account_circle</span>
+            {% if user.is_authenticated %}
+
+            {% with roles_string=user.groups.all|join:"," %}
+            {% if "Streamers" in roles_string %}
+            <a href="{% url 'stream_page' %}"
+                style="color:var(--yt-red);text-decoration:none;margin-right:16px;font-weight:700;">Quản lý Stream</a>
+            {% else %}
+            <a href="{% url 'viewer_page' %}"
+                style="color:var(--yt-blue);text-decoration:none;margin-right:16px;font-weight:700;">Xem Stream</a>
+            {% endif %}
+
+            <span style="color:var(--yt-text-primary);text-decoration:none;margin-left:8px;">
+                Xin chào, <strong>{{ user.username }}</strong>
+                {% if "Streamers" in roles_string %}
+                <span style="color: var(--yt-red);">(Streamer)</span>
+                {% elif "Viewers" in roles_string %}
+                <span style="color: var(--yt-blue);">(Viewer)</span>
+                {% endif %}
+            </span>
+            {% endwith %}
+
+            <a href="{% url 'logout' %}" style="color:var(--yt-text-secondary);margin-left:12px;">Đăng xuất</a>
+            {% else %}
+            <a href="{% url 'login' %}"
+                style="color:var(--yt-blue);text-decoration:none;margin-left:8px; font-weight: 700;">Đăng nhập</a>
+            <a href="{% url 'register' %}"
+                style="color:var(--yt-text-primary);text-decoration:none;margin-left:12px; background: var(--yt-blue); padding: 8px 12px; border-radius: 20px; font-weight: 700;">Đăng
+                ký</a>
+            {% endif %}
         </div>
     </header>
+
+    {% if messages %}
+    <div style="max-width:90%;margin:12px auto;">
+        <ul class="flash-messages" style="list-style:none;padding:0;margin:0;">
+            {% for m in messages %}
+            {% if m.level == DEFAULT_MESSAGE_LEVELS.ERROR %}
+            <li
+                style="background:rgba(255, 0, 0, 0.2); border: 1px solid var(--yt-red); color:var(--yt-text-primary);padding:12px 16px;border-radius:6px;margin-bottom:6px;">
+                <strong>Lỗi:</strong> {{ m }}
+            </li>
+            {% else %}
+            <li
+                style="background:rgba(0, 255, 0, 0.1); border: 1px solid #28a745; color:var(--yt-text-primary);padding:12px 16px;border-radius:6px;margin-bottom:6px;">
+                {{ m }}
+            </li>
+            {% endif %}
+            {% endfor %}
+        </ul>
+    </div>
+    {% endif %}
 
     <main class="container">
         {% block content %}

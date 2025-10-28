@@ -1,0 +1,47 @@
+{% extends 'base.html' %}
+{% block title %}Đăng ký{% endblock %}
+
+{% block content %}
+<div style="max-width:480px;margin:32px auto;padding:24px;background:var(--yt-surface);border-radius:8px;">
+    <h2>Đăng ký</h2>
+    {% if messages %}
+    <ul style="color:var(--yt-text-secondary);font-size:14px;">
+        {% for m in messages %}
+        <li>{{ m }}</li>
+        {% endfor %}
+    </ul>
+    {% endif %}
+    <form method="post" action="{% url 'register' %}">
+        {% csrf_token %}
+        <label for="username" class="sr-only">Tên đăng nhập</label>
+        <input id="username" name="username" type="text" placeholder="Tên đăng nhập" required
+            style="margin-bottom:12px;">
+
+        <label for="password" class="sr-only">Mật khẩu</label>
+        <input id="password" name="password" type="password" placeholder="Mật khẩu" required
+            style="margin-bottom:12px;">
+
+        <label for="password2" class="sr-only">Nhập lại mật khẩu</label>
+        <input id="password2" name="password2" type="password" placeholder="Nhập lại mật khẩu" required
+            style="margin-bottom:12px;">
+
+        <div style="margin-bottom: 16px;">
+            <label style="display: block; margin-bottom: 8px; color: var(--yt-text-secondary);">Bạn là:</label>
+            <div style="display: flex; gap: 16px;">
+                <label style="display: flex; align-items: center; gap: 4px; cursor: pointer;">
+                    <input type="radio" name="role" value="streamer" required> Streamer
+                </label>
+                <label style="display: flex; align-items: center; gap: 4px; cursor: pointer;">
+                    <input type="radio" name="role" value="viewer" required> Viewer
+                </label>
+            </div>
+        </div>
+
+        <div style="display:flex;gap:8px;align-items:center;">
+            <button type="submit" class="primary">Đăng ký</button>
+            <a href="{% url 'login' %}" style="color:var(--yt-text-secondary);margin-left:8px;">Đã có tài khoản? Đăng
+                nhập</a>
+        </div>
+    </form>
+</div>
+{% endblock %}

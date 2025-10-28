@@ -1,0 +1,43 @@
+{% extends 'base.html' %}
+{% block title %}Chào mừng đến StreamRTC{% endblock %}
+
+{% block content %}
+<div style="text-align: center; max-width: 600px; margin: 80px auto;">
+    <span class="material-icons logo-icon" style="font-size: 80px; color: var(--yt-red);">play_circle_filled</span>
+    <h1 style="font-size: 48px; margin: 16px 0;">Chào mừng đến StreamRTC</h1>
+    <p style="font-size: 18px; color: var(--yt-text-secondary); margin-bottom: 32px;">
+        Nền tảng stream video trực tiếp sử dụng WebRTC, xây dựng bằng Django và aiortc.
+    </p>
+
+    {% if user.is_authenticated %}
+    <p style="font-size: 16px; margin-bottom: 24px;">
+        Bạn đã đăng nhập với tư cách <strong>{{ user.username }}</strong>.
+    </p>
+    <div>
+        {% with roles_string=user.groups.all|join:"," %}
+        {% if "Streamers" in roles_string %}
+        <a href="{% url 'stream_page' %}" class="primary"
+            style="padding: 12px 24px; text-decoration: none; font-size: 18px;">
+            Tới trang Quản lý Stream
+        </a>
+        {% else %}
+        <a href="{% url 'viewer_page' %}" class="primary"
+            style="padding: 12px 24px; text-decoration: none; font-size: 18px;">
+            Xem các kênh Stream
+        </a>
+        {% endif %}
+        {% endwith %}
+    </div>
+    {% else %}
+    <div style="display: flex; justify-content: center; gap: 16px;">
+        <a href="{% url 'login' %}" class="primary" style="padding: 12px 24px; text-decoration: none; font-size: 18px;">
+            Đăng nhập
+        </a>
+        <a href="{% url 'register' %}"
+            style="padding: 12px 24px; text-decoration: none; font-size: 18px; background-color: var(--yt-surface-hover); color: var(--yt-text-primary); border-radius: 20px;">
+            Đăng ký
+        </a>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}
