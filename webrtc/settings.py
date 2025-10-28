@@ -25,11 +25,23 @@ DEBUG = os.environ.get('DEBUG', 'False') == 'True'
 
 ALLOWED_HOSTS = ['127.0.0.1', 'localhost']
 
-CSRF_TRUSTED_ORIGINS = []
-
 RENDER_EXTERNAL_HOSTNAME = os.environ.get('RENDER_EXTERNAL_HOSTNAME')
 if RENDER_EXTERNAL_HOSTNAME:
     ALLOWED_HOSTS.append(RENDER_EXTERNAL_HOSTNAME)
+
+trusted_origins_env = os.environ.get('CSRF_TRUSTED_ORIGINS')
+
+if trusted_origins_env:
+    # Tách chuỗi đó bằng dấu phẩy để tạo ra một danh sách
+    CSRF_TRUSTED_ORIGINS = trusted_origins_env.split(',')
+else:
+    # Nếu không set, dùng danh sách trống
+    CSRF_TRUSTED_ORIGINS = []
+
+# (DỰ PHÒNG) Thêm cả RENDER_EXTERNAL_URL (do Render cung cấp) cho chắc chắn
+RENDER_EXTERNAL_URL = os.environ.get('RENDER_EXTERNAL_URL')
+if RENDER_EXTERNAL_URL and RENDER_EXTERNAL_URL not in CSRF_TRUSTED_ORIGINS:
+    CSRF_TRUSTED_ORIGINS.append(RENDER_EXTERNAL_URL)
 
 # Application definition
 INSTALLED_APPS = [
