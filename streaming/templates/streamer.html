@@ -135,7 +135,17 @@
 
         try {
             // 1. Khởi tạo WebRTC
-            peerConnection = new RTCPeerConnection();
+            peerConnection = new RTCPeerConnection({
+                iceServers: [
+                    { urls: 'stun:stun.l.google.com:19302' },
+                    { urls: 'stun:stun1.l.google.com:19302' },
+                    {
+                        urls: 'turn:relay1.expressturn.com:3478',
+                        username: 'efree',
+                        credential: 'efree'
+                    }
+                ]
+            });
             const stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
             video.srcObject = stream;
             stream.getTracks().forEach(track => peerConnection.addTrack(track, stream));
