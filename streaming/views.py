@@ -6,11 +6,8 @@ from django.contrib.auth import login, logout
 from django.contrib.auth.models import User, Group
 from django.contrib.auth.decorators import login_required
 from aiortc import RTCPeerConnection, RTCSessionDescription
-
-# (MỚI) Import trình trợ giúp sync_to_async
 from asgiref.sync import sync_to_async
 
-# ========================================
 # View cho trang chủ
 def welcome_page(request):
     """Phục vụ trang Chào mừng (trang chủ mới)."""
@@ -26,12 +23,10 @@ def handle_login_redirect(request):
         return redirect('stream_page') # Streamer đi đến trang stream
     else:
         return redirect('viewer_page') # Viewer đi đến trang xem
-# ========================================
 
 # === Phần trạng thái (State) toàn cục ===
 pcs = set()
 rooms = {}  
-# ========================================
 
 @login_required 
 def index(request): # Trang Streamer
@@ -88,18 +83,16 @@ def viewer_page(request):
     """Phục vụ trang Viewer."""
     return render(request, "viewer.html")
 
-
-# === (CẬP NHẬT) Sửa hàm offer ===
 async def offer(request):
     """
     Streamer gửi offer. Đây là một ASYNC view.
     """
-    # (CẬP NHẬT) 1. Kiểm tra đăng nhập (an toàn)
+    # 1. Kiểm tra đăng nhập (an toàn)
     is_authenticated = await sync_to_async(lambda: request.user.is_authenticated)()
     if not is_authenticated:
         return HttpResponseForbidden("Bạn phải đăng nhập để stream.")
     
-    # (CẬP NHẬT) 2. Kiểm tra vai trò (an toàn)
+    # 2. Kiểm tra vai trò (an toàn)
     @sync_to_async
     def is_streamer(user):
         return user.groups.filter(name='Streamers').exists()
@@ -118,7 +111,7 @@ async def offer(request):
     pcs.add(pc)
     stream_tracks = []
     
-    # (CẬP NHẬT) 3. Lấy username (an toàn)
+    # 3. Lấy username (an toàn)
     room_owner_username = await sync_to_async(lambda: request.user.username)() 
 
     @pc.on("track")
@@ -153,12 +146,12 @@ async def offer(request):
     })
 
 
-# === (CẬP NHẬT) Sửa hàm viewer ===
+# === Sửa hàm viewer ===
 async def viewer(request):
     """
     Viewer kết nối để xem. Đây cũng là một ASYNC view.
     """
-    # (CẬP NHẬT) 1. Kiểm tra đăng nhập (an toàn)
+    # 1. Kiểm tra đăng nhập (an toàn)
     is_authenticated = await sync_to_async(lambda: request.user.is_authenticated)()
     if not is_authenticated:
         return HttpResponseForbidden("Bạn phải đăng nhập để xem.")
@@ -191,7 +184,7 @@ async def viewer(request):
     answer = await pc.createAnswer()
     await pc.setLocalDescription(answer)
 
-    # (CẬP NHẬT) 2. Lấy username (an toàn)
+    # 2. Lấy username (an toàn)
     viewer_username = await sync_to_async(lambda: request.user.username)()
     print(f"👀 Viewer '{viewer_username}' connected to room '{room_id}'")
 

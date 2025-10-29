@@ -19,8 +19,6 @@ urlpatterns = [
         ), name='login'),
     path('logout/', views.logout_view, name='logout'),
     path('register/', views.register_view, name='register'),
-
-    # Các đường dẫn cũ
     path('viewer/', views.viewer_page, name='viewer_page'), 
     path('offer', views.offer, name='offer_api'),       
     path('viewer_connect', views.viewer, name='viewer_api'), 
