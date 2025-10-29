@@ -12,24 +12,39 @@ if IS_RENDER:
     # === CÀI ĐẶT CHO PRODUCTION (TRÊN RENDER) ===
     
     SECRET_KEY = os.environ.get('SECRET_KEY')
-    DEBUG = False 
+    DEBUG = False
     
-    # (SỬA LỖI) Thêm trực tiếp tên miền của bạn vào đây
-    # để sửa lỗi "DisallowedHost"
-    ALLOWED_HOSTS = ['127.0.0.1', 'localhost', 'streemly.onrender.com']
+    # (KHỐI CẬP NHẬT)
+    # Khởi tạo danh sách
+    ALLOWED_HOSTS = ['127.0.0.1', 'localhost']
+    CSRF_TRUSTED_ORIGINS = []
 
-    # (SỬA LỖI) Đọc CSRF_TRUSTED_ORIGINS từ biến môi trường
-    # để sửa lỗi 403 (CSRF)
+    # 1. Đọc biến CSRF_TRUSTED_ORIGINS mà bạn đã set
+    # (Giá trị là "https://streemly.onrender.com")
     trusted_origins_env = os.environ.get('CSRF_TRUSTED_ORIGINS')
+    
     if trusted_origins_env:
-        CSRF_TRUSTED_ORIGINS = trusted_origins_env.split(',')
-    else:
-        CSRF_TRUSTED_ORIGINS = []
+        # Tách chuỗi nếu có nhiều giá trị
+        origins = trusted_origins_env.split(',')
+        
+        # Thêm vào danh sách CSRF (cho lỗi 403)
+        CSRF_TRUSTED_ORIGINS.extend(origins)
+        
+        # (SỬA) Thêm vào ALLOWED_HOSTS (cho lỗi DisallowedHost)
+        for origin in origins:
+            # Lấy hostname từ URL.
+            # "https://streemly.onrender.com" -> "streemly.onrender.com"
+            hostname = origin.replace('https://', '').split('/')[0]
+            ALLOWED_HOSTS.append(hostname)
 
-    # (DỰ PHÒNG) Thêm cả RENDER_EXTERNAL_URL (do Render cung cấp)
+    # 2. (DỰ PHÒNG) Thêm cả biến RENDER_EXTERNAL_URL (do Render cung cấp)
     RENDER_EXTERNAL_URL = os.environ.get('RENDER_EXTERNAL_URL')
-    if RENDER_EXTERNAL_URL and RENDER_EXTERNAL_URL not in CSRF_TRUSTED_ORIGINS:
-        CSRF_TRUSTED_ORIGINS.append(RENDER_EXTERNAL_URL)
+    if RENDER_EXTERNAL_URL:
+        hostname = RENDER_EXTERNAL_URL.replace('https://', '').split('/')[0]
+        if hostname not in ALLOWED_HOSTS:
+            ALLOWED_HOSTS.append(hostname)
+        if RENDER_EXTERNAL_URL not in CSRF_TRUSTED_ORIGINS:
+            CSRF_TRUSTED_ORIGINS.append(RENDER_EXTERNAL_URL)
 
     # CSDL Production (PostgreSQL)
     DATABASES = {
@@ -52,30 +67,23 @@ if IS_RENDER:
 
 else:
     # === CÀI ĐẶT CHO DEVELOPMENT (Ở MÁY LOCAL) ===
-    
+    # ... (Khối này giữ nguyên) ...
     SECRET_KEY = 'django-insecure-local-key-cho-development'
-    DEBUG = True 
+    DEBUG = True
     ALLOWED_HOSTS = ['127.0.0.1', 'localhost']
     CSRF_TRUSTED_ORIGINS = ['http://127.0.0.1:8000', 'http://localhost:8000']
-
-    # CSDL Local (SQLite)
     DATABASES = {
         'default': {
             'ENGINE': 'django.db.backends.sqlite3',
             'NAME': BASE_DIR / 'db.sqlite3',
         }
     }
-
-    # Lớp Kênh Local (In-memory)
     CHANNEL_LAYERS = {
         "default": {
             "BACKEND": "channels.layers.InMemoryChannelLayer"
         }
     }
-    
-    # File tĩnh Local
     STATIC_ROOT = BASE_DIR / 'staticfiles'
-
 # === CÀI ĐẶT CHUNG (Cho cả hai môi trường) ===
 
 INSTALLED_APPS = [
@@ -141,4 +149,4 @@ STATICFILES_DIRS = [
 
 LOGIN_URL = 'login'
 LOGIN_REDIRECT_URL = 'login_redirect' 
-LOGOUT_REDIRECT_URL = 'welcome'
+LOGOUT_REDIRECT_URL = 'welcome' 
