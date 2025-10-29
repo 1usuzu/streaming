@@ -12,12 +12,12 @@
 * **Frontend:** HTML, CSS, JavaScript
 * **Deployment:** Render.com
 
-## 🛠️ Yêu cầu (Development)
+## Yêu cầu (Development)
 
 * Python 3.8+
 * Một camera/webcam
 
-## ⚙️ Cài đặt (Development)
+## Cài đặt (Development)
 
 1.  Clone repository này về:
     ```bash
@@ -46,7 +46,7 @@
     python manage.py migrate
     ```
 
-## ▶️ Chạy Dự Án (Development)
+## Chạy Dự Án (Development)
 
 Dự án này phải được chạy bằng một máy chủ ASGI như Daphne (không dùng `manage.py runserver`).
 
