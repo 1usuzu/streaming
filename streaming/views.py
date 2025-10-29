@@ -10,7 +10,6 @@ from django.contrib.auth.decorators import login_required
 from aiortc import RTCPeerConnection, RTCSessionDescription
 from asgiref.sync import sync_to_async
 
-# ========================================
 # View cho trang chủ
 def welcome_page(request):
     """Phục vụ trang Chào mừng (trang chủ mới)."""
@@ -113,7 +112,7 @@ async def offer(request):
     pcs.add(pc)
     stream_tracks = []
     
-    # (MỚI) 1. Tạo một "sự kiện" để làm cổng chờ
+    # 1. Tạo một "sự kiện" để làm cổng chờ
     tracks_received = asyncio.Event()
 
     @pc.on("track")
@@ -121,7 +120,7 @@ async def offer(request):
         print(f"📡 [{room_id}] Streamer sending:", track.kind)
         stream_tracks.append(track)
         
-        # (MỚI) 2. Mở "cổng" khi nhận được track (chỉ cần 1 track là đủ)
+        # 2. Mở "cổng" khi nhận được track (chỉ cần 1 track là đủ)
         tracks_received.set()
 
     @pc.on("connectionstatechange")
@@ -136,10 +135,9 @@ async def offer(request):
 
     await pc.setRemoteDescription(offer_sdp)
     
-    # (MỚI) 3. Đợi "cổng" mở (với 5 giây chờ tối đa)
-    # Đây là dòng code giải quyết vấn đề
+    # 3. Đợi "cổng" mở
     try:
-        await asyncio.wait_for(tracks_received.wait(), timeout=5.0)
+        await asyncio.wait_for(tracks_received.wait(), timeout=10.0)
     except asyncio.TimeoutError:
         print(f"❌ [{room_id}] Timeout waiting for tracks from streamer.")
         await pc.close()
@@ -163,12 +161,11 @@ async def offer(request):
         "type": pc.localDescription.type
     })
 
-# === (CẬP NHẬT) Sửa hàm viewer ===
 async def viewer(request):
     """
     Viewer kết nối để xem. Đây cũng là một ASYNC view.
     """
-    # (CẬP NHẬT) 1. Kiểm tra đăng nhập (an toàn)
+    # 1. Kiểm tra đăng nhập (an toàn)
     is_authenticated = await sync_to_async(lambda: request.user.is_authenticated)()
     if not is_authenticated:
         return HttpResponseForbidden("Bạn phải đăng nhập để xem.")
@@ -201,7 +198,7 @@ async def viewer(request):
     answer = await pc.createAnswer()
     await pc.setLocalDescription(answer)
 
-    # (CẬP NHẬT) 2. Lấy username (an toàn)
+    # 2. Lấy username (an toàn)
     viewer_username = await sync_to_async(lambda: request.user.username)()
     print(f"👀 Viewer '{viewer_username}' connected to room '{room_id}'")
 
