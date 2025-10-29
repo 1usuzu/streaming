@@ -1,16 +1,27 @@
 # Dự án Stream Video WebRTC bằng Django
 
-Đây là một dự án streaming video 1-nhiều (one-to-many) sử dụng Django làm backend (signaling server) và aiortc cho kết nối WebRTC.
+Đây là một dự án streaming video sử dụng Django làm backend, aiortc cho kết nối WebRTC, và Django Channels cho chat thời gian thực.
 
-## Yêu cầu
+## Công Nghệ Sử Dụng
+
+* **Backend:** Django, Django Channels
+* **WebRTC:** aiortc
+* **ASGI Server:** Daphne
+* **Database:** PostgreSQL
+* **Chat Backend:** Redis
+* **Frontend:** HTML, CSS, JavaScript
+* **Deployment:** Render.com
+
+## 🛠️ Yêu cầu (Development)
+
 * Python 3.8+
 * Một camera/webcam
 
-## Cài đặt
+## ⚙️ Cài đặt (Development)
 
 1.  Clone repository này về:
     ```bash
-    git clone https://github.com/1usuzu/streaming.git
+    git clone [<URL_REPO_CUA_BAN>](https://github.com/1usuzu/streaming)
     cd streaming
     ```
 
@@ -19,7 +30,7 @@
     # Windows
     python -m venv venv
     .\venv\Scripts\activate
-    
+
     # macOS / Linux
     python3 -m venv venv
     source venv/bin/activate
@@ -30,20 +41,14 @@
     pip install -r requirements.txt
     ```
 
-## Chạy dự án
+4.  Chạy migrate (để tạo bảng CSDL ban đầu, bao gồm cả bảng user):
+    ```bash
+    python manage.py migrate
+    ```
 
-Dự án này phải được chạy bằng một máy chủ ASGI như Uvicorn (không dùng `manage.py runserver`).
+## ▶️ Chạy Dự Án (Development)
+
+Dự án này phải được chạy bằng một máy chủ ASGI như Daphne (không dùng `manage.py runserver`).
 
 ```bash
-uvicorn webrtc.asgi:application --host 127.0.0.1 --port 8000
-```
-
-## Cách sử dụng
-
-1.  **Streamer:** Mở trình duyệt và truy cập:
-    `http://127.0.0.1:8000/`
-    Nhập ID phòng (ví dụ: `room1`) và nhấn "Start Streaming".
-
-2.  **Viewer:** Mở trình duyệt (trong tab hoặc máy khác) và truy cập:
-    `http://127.0.0.1:8000/viewer/`
-    Nhập chính xác ID phòng (`room1`) và nhấn "Connect".
+daphne -p 8000 webrtc.asgi:application
