@@ -7,6 +7,7 @@ from django.contrib.auth.models import User, Group
 from django.contrib.auth.decorators import login_required
 from aiortc import RTCPeerConnection, RTCSessionDescription
 from asgiref.sync import sync_to_async
+from aiortc.turn import STUN_SERVER_LIST
 
 # View cho trang chủ
 def welcome_page(request):
@@ -107,7 +108,8 @@ async def offer(request):
     room_id = params["room_id"]
     offer_sdp = RTCSessionDescription(sdp=params["sdp"], type=params["type"])
 
-    pc = RTCPeerConnection()
+    pc = RTCPeerConnection(configuration={
+            "iceServers": [{"urls": "stun:stun.l.google.com:19302"}]})
     pcs.add(pc)
     stream_tracks = []
     
@@ -167,7 +169,7 @@ async def viewer(request):
         return JsonResponse({"error": f"Room '{room_id}' not found"}, status=404)
 
     streamer_tracks = rooms[room_id]["tracks"]
-    pc = RTCPeerConnection()
+    pc = RTCPeerConnection(configuration={"iceServers": [{"urls": "stun:stun.l.google.com:19302"}]})
     pcs.add(pc)
 
     for track in streamer_tracks:
