@@ -2,89 +2,94 @@ import os
 import dj_database_url
 from pathlib import Path
 
-# Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
 
-# (QUAN TRỌNG) Kiểm tra xem chúng ta đang ở trên Render hay không
 IS_RENDER = os.environ.get('RENDER', 'False') == 'True'
 
 if IS_RENDER:
-    # === CÀI ĐẶT CHO PRODUCTION (TRÊN RENDER) ===
+    # === PRODUCTION (RENDER) ===
     
     SECRET_KEY = os.environ.get('SECRET_KEY')
     DEBUG = False
     
-    # (KHỐI CẬP NHẬT)
-    # Khởi tạo danh sách
-    ALLOWED_HOSTS = ['127.0.0.1', 'localhost']
-    CSRF_TRUSTED_ORIGINS = []
-
-    # 1. Đọc biến CSRF_TRUSTED_ORIGINS mà bạn đã set
-    # (Giá trị là "https://streemly.onrender.com")
-    trusted_origins_env = os.environ.get('CSRF_TRUSTED_ORIGINS')
+    # Khởi tạo với domain cứng trước
+    ALLOWED_HOSTS = [
+        '127.0.0.1', 
+        'localhost',
+        'streemly.onrender.com',
+        '.onrender.com',
+    ]
     
+    CSRF_TRUSTED_ORIGINS = [
+        'https://streemly.onrender.com',  # ← Thêm cứng
+    ]
+
+    # Vẫn đọc từ biến môi trường nếu có
+    trusted_origins_env = os.environ.get('CSRF_TRUSTED_ORIGINS')
     if trusted_origins_env:
-        # Tách chuỗi nếu có nhiều giá trị
         origins = trusted_origins_env.split(',')
-        
-        # Thêm vào danh sách CSRF (cho lỗi 403)
         CSRF_TRUSTED_ORIGINS.extend(origins)
         
-        # (SỬA) Thêm vào ALLOWED_HOSTS (cho lỗi DisallowedHost)
         for origin in origins:
-            # Lấy hostname từ URL.
-            # "https://streemly.onrender.com" -> "streemly.onrender.com"
-            hostname = origin.replace('https://', '').split('/')[0]
-            ALLOWED_HOSTS.append(hostname)
+            hostname = origin.replace('https://', '').replace('http://', '').split('/')[0]
+            if hostname not in ALLOWED_HOSTS:
+                ALLOWED_HOSTS.append(hostname)
 
-    # 2. (DỰ PHÒNG) Thêm cả biến RENDER_EXTERNAL_URL (do Render cung cấp)
+    # Đọc RENDER_EXTERNAL_URL
     RENDER_EXTERNAL_URL = os.environ.get('RENDER_EXTERNAL_URL')
     if RENDER_EXTERNAL_URL:
-        hostname = RENDER_EXTERNAL_URL.replace('https://', '').split('/')[0]
+        hostname = RENDER_EXTERNAL_URL.replace('https://', '').replace('http://', '').split('/')[0]
         if hostname not in ALLOWED_HOSTS:
             ALLOWED_HOSTS.append(hostname)
         if RENDER_EXTERNAL_URL not in CSRF_TRUSTED_ORIGINS:
             CSRF_TRUSTED_ORIGINS.append(RENDER_EXTERNAL_URL)
 
-    # CSDL Production (PostgreSQL)
+    # Database
     DATABASES = {
-        'default': dj_database_url.config(conn_max_age=600, ssl_require=True)
+        'default': dj_database_url.config(
+            default=os.environ.get('DATABASE_URL'),
+            conn_max_age=600,
+            ssl_require=True
+        )
     }
 
-    # Lớp Kênh Production (Redis)
+    # Channel Layers
     CHANNEL_LAYERS = {
         "default": {
             "BACKEND": "channels_redis.core.RedisChannelLayer",
             "CONFIG": {
-                "hosts": [os.environ.get('REDIS_URL')],
+                "hosts": [os.environ.get('REDIS_URL', 'redis://localhost:6379')],
             },
         },
     }
     
-    # Cấu hình file tĩnh cho Production (WhiteNoise)
+    # Static files
     STATIC_ROOT = BASE_DIR / 'staticfiles'
     STATICFILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage'
 
 else:
-    # === CÀI ĐẶT CHO DEVELOPMENT (Ở MÁY LOCAL) ===
-    # ... (Khối này giữ nguyên) ...
+    # === DEVELOPMENT (LOCAL) ===
     SECRET_KEY = 'django-insecure-local-key-cho-development'
     DEBUG = True
     ALLOWED_HOSTS = ['127.0.0.1', 'localhost']
     CSRF_TRUSTED_ORIGINS = ['http://127.0.0.1:8000', 'http://localhost:8000']
+    
     DATABASES = {
         'default': {
             'ENGINE': 'django.db.backends.sqlite3',
             'NAME': BASE_DIR / 'db.sqlite3',
         }
     }
+    
     CHANNEL_LAYERS = {
         "default": {
             "BACKEND": "channels.layers.InMemoryChannelLayer"
         }
     }
+    
     STATIC_ROOT = BASE_DIR / 'staticfiles'
-# === CÀI ĐẶT CHUNG (Cho cả hai môi trường) ===
+
+# === COMMON SETTINGS ===
 
 INSTALLED_APPS = [
     'daphne',
@@ -149,4 +154,4 @@ STATICFILES_DIRS = [
 
 LOGIN_URL = 'login'
 LOGIN_REDIRECT_URL = 'login_redirect' 
-LOGOUT_REDIRECT_URL = 'welcome' 
+LOGOUT_REDIRECT_URL = 'welcome'
