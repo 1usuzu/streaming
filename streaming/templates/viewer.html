@@ -116,7 +116,7 @@
                 iceServers: [
                     { urls: 'stun:stun.l.google.com:19302' },
                     {
-                        urls: 'turn:global.relay.metered.ca:80',
+                        urls: 'turn:global.relay.metered.ca:80?transport=tcp',
                         username: 'openai',
                         credential: 'openai123'
                     }
@@ -129,7 +129,6 @@
             peerConnection.onicecandidateerror = (e) => {
                 console.error("ICE candidate error:", e);
             };
-
 
             peerConnection.ontrack = (event) => {
                 console.log("Got track!", event.track.kind);
