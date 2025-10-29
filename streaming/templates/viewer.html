@@ -123,6 +123,14 @@
                 ]
             });
 
+            peerConnection.oniceconnectionstatechange = () => {
+                console.log("ICE state:", peerConnection.iceConnectionState);
+            };
+            peerConnection.onicecandidateerror = (e) => {
+                console.error("ICE candidate error:", e);
+            };
+
+
             peerConnection.ontrack = (event) => {
                 console.log("Got track!", event.track.kind);
                 if (remoteVideo.srcObject !== event.streams[0]) {

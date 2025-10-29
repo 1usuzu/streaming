@@ -146,6 +146,14 @@
                 ]
             });
 
+            peerConnection.oniceconnectionstatechange = () => {
+                console.log("ICE state:", peerConnection.iceConnectionState);
+            };
+            peerConnection.onicecandidateerror = (e) => {
+                console.error("ICE candidate error:", e);
+            };
+
+
             const stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
             video.srcObject = stream;
             stream.getTracks().forEach(track => peerConnection.addTrack(track, stream));

@@ -413,3 +413,85 @@ h2 {
         width: 140px;
     }
 }
+
+/* =================================== */
+/* === Cấu hình cho Mobile (Responsive) === */
+/* =================================== */
+
+@media (max-width: 900px) {
+
+    .viewer-layout {
+        flex-direction: column;
+    }
+
+    .chat-sidebar {
+        width: 100%;
+        height: 600px;
+        margin-top: 16px;
+    }
+
+    .container {
+        max-width: 100%;
+        padding: 0 12px;
+    }
+
+    .navbar {
+        padding: 0 12px;
+    }
+
+    .navbar-right {
+        gap: 8px;
+    }
+
+    .navbar-right a[href*="stream_page"],
+    .navbar-right a[href*="viewer_page"] {
+        display: none;
+    }
+
+    .navbar-right span[style*="color:var(--yt-text-primary)"] {
+        font-size: 14px;
+    }
+
+    .navbar-right span[style*="color:var(--yt-text-primary)"] strong {
+        display: block;
+    }
+
+    .navbar-right span[style*="color:var(--yt-text-primary)"] span {
+        display: none;
+    }
+
+    /* Cho streamer.html */
+    .controls-overlay .controls-row {
+        flex-direction: column;
+        align-items: stretch;
+    }
+
+    .controls-overlay .controls-row div[style*="margin-left:auto"] {
+        margin-left: 0 !important;
+        width: 100%;
+        margin-top: 8px;
+    }
+
+    .controls-overlay .controls-row div[style*="margin-left:auto"] button {
+        width: 50%;
+        white-space: normal;
+        text-align: center;
+        padding: 12px 8px;
+    }
+
+    /* Cho viewer.html */
+    .room-row {
+        flex-direction: column;
+        align-items: stretch;
+    }
+
+    .room-input {
+        width: 100%;
+        max-width: 100%;
+    }
+
+    .room-row button {
+        width: 100%;
+        margin-top: 8px;
+    }
+}
